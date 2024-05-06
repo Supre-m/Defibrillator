@@ -18,11 +18,11 @@ namespace DesfribilatorPlugin
         public void OnStart()
         {
             if (plugin.Config.SpawnLczArmory)
-                SpawnObjectInSpecificRoom(Room.Get(Exiled.API.Enums.RoomType.LczArmory), "DTR-DFRB-001", new Vector3(4f, 0.5f, -1.5f));
+                SpawnObjectInSpecificRoom(Room.Get(Exiled.API.Enums.RoomType.LczArmory), "DTR-DFRB-001", new Vector3(0f, 0.5f, 0f));
             if (plugin.Config.SpawnHczArmory)
-                SpawnObjectInSpecificRoom(Room.Get(Exiled.API.Enums.RoomType.HczArmory), "DTR-DFRB-001", new Vector3(2.25f, 1.5f, -1.3f));
+                SpawnObjectInSpecificRoom(Room.Get(Exiled.API.Enums.RoomType.HczArmory), "DTR-DFRB-001", new Vector3(0f, 5f, 0f));
             if (plugin.Config.SpawnMicroHID)
-                SpawnObjectInSpecificRoom(Room.Get(Exiled.API.Enums.RoomType.HczHid), "DTR-DFRB-001", new Vector3(2.5f, 1.05f, -5f));
+                SpawnObjectInSpecificRoom(Room.Get(Exiled.API.Enums.RoomType.HczHid), "DTR-DFRB-001", new Vector3(0f, 2f, 0f));
         }
 
         private void SpawnObjectInSpecificRoom(Room roomName, String itemType, Vector3 positionplus)
@@ -32,7 +32,7 @@ namespace DesfribilatorPlugin
             float PlusX = positionplus.x;
             float PlusY = positionplus.y;
             float PlusZ = positionplus.z;
-
+            Vector3 Plus = new Vector3(PlusX, PlusY, PlusZ);
             if (room != null)
             {
                 // Obtiene una posición aleatoria dentro de la sala
@@ -40,12 +40,9 @@ namespace DesfribilatorPlugin
 
                 // Crea una instancia del objeto que deseas spawnear
                 CustomItem item = CustomItem.Get($"{itemType}");
-
-                // Agrega el objeto al mundo
-                item.Spawn(position);
-
+                Timing.CallDelayed(5, () => { CustomItem.Get($"{itemType}").Spawn(position); });
                 if (item != null)
-                    Log.Info($"¡Item {itemType} Successfully in {roomName}!.");
+                    Log.Info($"¡Item {itemType} Successfully in {roomName}({roomName.Position + Plus}!.");
                 else
                     Log.Error("Oops... Something Is Wrong.");
             }

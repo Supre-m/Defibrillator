@@ -31,7 +31,7 @@
 
         /// <inheritdoc/>
         public override string Description { get; set; } =
-            "Desfribilador, solo es un desfribilador normal, no tiene nada diferente, ¿Que esperas?.";
+            "Defibrillator, it's just a normal defibrillator, it doesn't have anything different, what you do think is?";
 
         /// <inheritdoc/>
         public override float Weight { get; set; } = 1f;
@@ -45,6 +45,7 @@
         protected override void SubscribeEvents()
         {
             Exiled.Events.Handlers.Player.UsingItem += OnUsing;
+            Exiled.Events.Handlers.Player.ThrowingRequest += OnThrown;
             base.SubscribeEvents();
         }
 
@@ -52,12 +53,20 @@
         protected override void UnsubscribeEvents()
         {
             Exiled.Events.Handlers.Player.UsingItem -= OnUsing;
+            Exiled.Events.Handlers.Player.ThrowingRequest -= OnThrown;
             base.UnsubscribeEvents();
+        }
+
+        private void OnThrown(ThrowingRequestEventArgs ev)
+        {
+            if (Check(ev.Item) || ev.Item != null)
+                return;
+            ev.RequestType = ThrowRequest.CancelThrow;
         }
 
         private void OnUsing(UsingItemEventArgs ev)
         {
-            if (!Check(ev.Player.CurrentItem))
+            if (!Check(ev.Player.CurrentItem) || ev.Item == null)
                 return;
             Ragdoll closestRagdoll = null;
             float closestDistance = float.MaxValue;
@@ -85,6 +94,8 @@
                         ply.EnableEffect(EffectType.AmnesiaVision, 25, false);
                         ply.Position = new Vector3(closestRagdoll.Position.x, closestRagdoll.Position.y + 2, closestRagdoll.Position.z);
                         ply.ShowHint($"{Plugin.Instance.Translation.MessageWhenYouRevive}".Replace("{PlayerName}", ev.Player.DisplayNickname), 4);
+                        if (ply.CurrentRoom == Room.Get(RoomType.Pocket))
+                            ply.EnableEffect(EffectType.PocketCorroding, 9999, false);
                         ev.Item.Destroy();
                         closestRagdoll.Destroy();
                         Log.Info($"Player {ply.Nickname} revived successfully.");
@@ -106,61 +117,29 @@
                                     ply.ShowHint($"{Plugin.Instance.Translation.MessageWhenYouReviveSCP}".Replace("{PlayerName}", ev.Player.DisplayNickname), 4);
                                     ev.Item.Destroy();
                                     closestRagdoll.Destroy();
-                                    Log.Info($"El SCP {ply.Nickname} ha revivido exitosamente.");
+                                    Log.Info($"The SCP {ply.Nickname} has revived.");
                                 }
                             }
                         }
                         else
                         {
                             ev.IsAllowed = false;
-                            ev.Player.ShowHint("You can't revive something like that\n<color=red>Maybe you can revive other SCPs...</color>", 3);
+                            ev.Player.ShowHint($"{Plugin.Instance.Translation.BlacklistedSCPMessage}", 3);
                         }
                     }
                 }
                 else
                 {
                     ev.IsAllowed = false;
-                    ev.Player.ShowHint("This body has not a soul anymore...\n<color=red>You shouldn't try again</color>", 3);
+                    ev.Player.ShowHint($"{Plugin.Instance.Translation.MessageWhenARagdollnotavailable}", 3);
                 }
             }
             else
             {
-                ev.Player.ShowHint("¡Your need a corspe!");
+                ev.Player.ShowHint($"{Plugin.Instance.Translation.hintwhenthereisnoragdollnearby}");
                 ev.IsAllowed = false;
             }
 
-        }
-
-        private bool IsPlayerInDefibrillatorRange(Player player, Ragdoll ragdoll)
-        {
-            // Calcula la distancia entre el jugador y el ragdoll
-            float distance = Vector3.Distance(player.Position, ragdoll.Position);
-
-            // Verifica si el jugador está en el rango del ragdoll
-            return distance <= DefibrillatorRange.magnitude;
-        }
-
-        private void RevivePlayerUsingRagdoll(Player player, Ragdoll ragdoll)
-        {
-            if (player.IsDead) // Verifica si el jugador está muerto
-            {
-                if (ragdoll.Owner != null && ragdoll != null)
-                {
-                    // Implementa la lógica para revivir al jugador usando la información del ragdoll
-                    // Puedes acceder a las propiedades de ragdoll, como Position, Rotation, Owner, etc.
-                    // Restaura la salud, cambia el estado, etc.
-                    Player ply = ragdoll.Owner;
-                    ply.Role.Set(ragdoll.Role, RoleSpawnFlags.None); // Esto es un ejemplo básico, puedes necesitar más lógica según tus necesidades
-                    ply.Position = ragdoll.Position;
-                    ragdoll.Destroy();
-                    ply.ShowHint("<color=lime>¡Te revivieron con un desfribilador!</color>", 7); // Mensaje para informar al jugador
-                    Log.Info($"Player {player.Nickname} revivido usando el defibrilador personalizado.");
-                }
-                else
-                {
-                    Log.Info($"Ragdoll has no valid owner for player {player.Nickname}.");
-                }
-            }
         }
     }
 }
