@@ -14,6 +14,8 @@
     using PlayerRoles;
     using UnityEngine;
     using static PlayerList;
+    using System.Linq;
+    using System.Diagnostics.Eventing.Reader;
 
     /// <inheritdoc />
     [CustomItem(ItemType.Medkit)]
@@ -80,66 +82,100 @@
                     closestDistance = distance;
                 }
             }
-
-            if (closestRagdoll != null)
+            if (Plugin.Instance.EventHandlers.TimeGrace == 0)
             {
-                if (closestRagdoll.Owner.IsDead && !closestRagdoll.Owner.IsHost && closestRagdoll.Owner != null)
+                if (Plugin.Instance.EventHandlers.Cooldown == 0)
                 {
-                    if (closestRagdoll.Role.GetTeam() != Team.SCPs)
+                    if (closestRagdoll != null)
                     {
-                        Player ply = closestRagdoll.Owner;
-                        ply.Role.Set(closestRagdoll.Role, RoleSpawnFlags.None);
-                        ply.Health = Mathf.RoundToInt(ply.MaxHealth * 0.75f);
-                        ply.EnableEffect(EffectType.Burned, 15, false);
-                        ply.EnableEffect(EffectType.AmnesiaVision, 25, false);
-                        ply.Position = new Vector3(closestRagdoll.Position.x, closestRagdoll.Position.y + 2, closestRagdoll.Position.z);
-                        ply.ShowHint($"{Plugin.Instance.Translation.MessageWhenYouRevive}".Replace("{PlayerName}", ev.Player.DisplayNickname), 4);
-                        if (ply.CurrentRoom == Room.Get(RoomType.Pocket))
-                            ply.EnableEffect(EffectType.PocketCorroding, 9999, false);
-                        ev.Item.Destroy();
-                        closestRagdoll.Destroy();
-                        Log.Info($"Player {ply.Nickname} revived successfully.");
-                    }
-                    else
-                    {
-                         
-                        if (closestRagdoll.Role != RoleTypeId.Scp173 && Plugin.Instance.Config.SCPRevive == true)
+
+                        if (closestRagdoll.Owner.IsDead && !closestRagdoll.Owner.IsHost && closestRagdoll.Owner != null)
                         {
-                            foreach (RoleTypeId roleTypeId in Plugin.Instance.Config.SCPBlacklisted)
+                            if (closestRagdoll.Role.GetTeam() != Team.SCPs)
                             {
-                                if (ev.Player.Role.Type != roleTypeId)
+                                Player ply = closestRagdoll.Owner;
+                                ply.Role.Set(closestRagdoll.Role, RoleSpawnFlags.None);
+                                ply.Health = Mathf.RoundToInt(Plugin.Instance.Config.PercentageOfHPWhenRevived / 100 * ply.MaxHealth);
+                                ply.EnableEffect(EffectType.Burned, 15, false);
+                                ply.EnableEffect(EffectType.AmnesiaVision, 25, false);
+                                var revivingEffects = Plugin.Instance.Config.RevivingEffects;
+                                foreach (var Effects in revivingEffects)
                                 {
-                                    Player ply = closestRagdoll.Owner;
-                                    ply.Role.Set(closestRagdoll.Role, RoleSpawnFlags.None);
-                                    ply.Health = Mathf.RoundToInt(ply.MaxHealth * 0.3f);
-                                    ply.EnableEffect(EffectType.Burned, 15, false);
-                                    ply.Position = new Vector3(closestRagdoll.Position.x, closestRagdoll.Position.y + 2, closestRagdoll.Position.z);
-                                    ply.ShowHint($"{Plugin.Instance.Translation.MessageWhenYouReviveSCP}".Replace("{PlayerName}", ev.Player.DisplayNickname), 4);
-                                    ev.Item.Destroy();
-                                    closestRagdoll.Destroy();
-                                    Log.Info($"The SCP {ply.Nickname} has revived.");
+                                    var EffectType = Effects.Key;
+                                    var TimeEffect = Effects.Value;
+                                    ply.EnableEffect(EffectType, TimeEffect);
+                                }
+                                ply.Position = new Vector3(closestRagdoll.Position.x, closestRagdoll.Position.y + 2, closestRagdoll.Position.z);
+                                ply.ShowHint($"{Plugin.Instance.Translation.MessageWhenYouRevive}".Replace("{PlayerName}", ev.Player.DisplayNickname), 4);
+                                if (ply.CurrentRoom == Room.Get(RoomType.Pocket))
+                                    ply.EnableEffect(EffectType.PocketCorroding, 9999, false);
+                                Plugin.Instance.EventHandlers.Cooldown = Plugin.Instance.Config.CooldownTime;
+                                Plugin.Instance.Coroutines.Add(Timing.RunCoroutine(Plugin.Instance.EventHandlers.TimerCooldown()));
+                                ev.Item.Destroy();
+                                closestRagdoll.Destroy();
+                                Log.Info($"Player {ply.Nickname} revived successfully.");
+                            }
+                            else
+                            {
+
+                                if (Plugin.Instance.Config.SCPRevive == true)
+                                {
+                                    foreach (RoleTypeId roleTypeId in Plugin.Instance.Config.SCPBlacklisted)
+                                    {
+                                        if (ev.Player.Role.Type != roleTypeId)
+                                        {
+                                            Player ply = closestRagdoll.Owner;
+                                            ply.Role.Set(closestRagdoll.Role, RoleSpawnFlags.None);
+                                            ply.Health = Mathf.RoundToInt(Plugin.Instance.Config.PercentageOfHPWhenSCPRevived / 100 * ply.MaxHealth);
+                                            var revivingEffectsSCPs = Plugin.Instance.Config.RevivingEffectsSCPs;
+                                            foreach (var Effects in revivingEffectsSCPs)
+                                            {
+                                                var EffectType = Effects.Key;
+                                                var TimeEffect = Effects.Value;
+                                                ply.EnableEffect(EffectType, TimeEffect);
+                                            }
+                                            ply.Position = new Vector3(closestRagdoll.Position.x, closestRagdoll.Position.y + 2, closestRagdoll.Position.z);
+                                            ply.ShowHint($"{Plugin.Instance.Translation.MessageWhenYouReviveSCP}".Replace("{PlayerName}", ev.Player.DisplayNickname), 4);
+
+                                            Plugin.Instance.EventHandlers.Cooldown = Plugin.Instance.Config.CooldownTimeSCP;
+                                            Plugin.Instance.Coroutines.Add(Timing.RunCoroutine(Plugin.Instance.EventHandlers.TimerCooldown()));
+                                            ev.Item.Destroy();
+                                            closestRagdoll.Destroy();
+                                            Log.Info($"The SCP {ply.Nickname} has revived.");
+                                        }
+                                    }
+                                }
+                                else
+                                {
+                                    ev.IsAllowed = false;
+                                    ev.Player.ShowHint($"{Plugin.Instance.Translation.BlacklistedSCPMessage}", 3);
                                 }
                             }
                         }
                         else
                         {
                             ev.IsAllowed = false;
-                            ev.Player.ShowHint($"{Plugin.Instance.Translation.BlacklistedSCPMessage}", 3);
+                            ev.Player.ShowHint($"{Plugin.Instance.Translation.MessageWhenARagdollnotavailable}", 3);
                         }
                     }
+                    else
+                    {
+                        ev.IsAllowed = false;
+                        ev.Player.ShowHint($"{Plugin.Instance.Translation.hintwhenthereisnoragdollnearby}");
+                    }
+
                 }
                 else
                 {
                     ev.IsAllowed = false;
-                    ev.Player.ShowHint($"{Plugin.Instance.Translation.MessageWhenARagdollnotavailable}", 3);
+                    ev.Player.ShowHint($"{Plugin.Instance.Translation.CooldownHint.Replace("{Cooldown}", Plugin.Instance.EventHandlers.Cooldown.ToString())}", 3);
                 }
             }
             else
             {
-                ev.Player.ShowHint($"{Plugin.Instance.Translation.hintwhenthereisnoragdollnearby}");
                 ev.IsAllowed = false;
+                ev.Player.ShowHint($"{Plugin.Instance.Translation.TimeOfGrace.Replace("{Time}", Plugin.Instance.EventHandlers.TimeGrace.ToString())}", 3);
             }
-
         }
     }
 }

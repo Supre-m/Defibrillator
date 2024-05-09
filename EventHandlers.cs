@@ -6,49 +6,71 @@ using MEC;
 using DesfribilatorPlugin;
 using UnityEngine;
 using Exiled.CustomItems.API.Features;
+using Exiled.Events.EventArgs.Server;
+using Exiled.API.Enums;
+using Exiled.CustomRoles.API.Features;
 
 namespace DesfribilatorPlugin
 {
 
     public class EventHandler
     {
-        private readonly Plugin _plugin;
         private Plugin plugin = Plugin.Instance;
-
+        public int Cooldown = 0;
+        public int TimeGrace = Plugin.Instance.Config.GraceTime;
         public void OnStart()
         {
-            if (plugin.Config.SpawnLczArmory)
-                SpawnObjectInSpecificRoom(Room.Get(Exiled.API.Enums.RoomType.LczArmory), "DTR-DFRB-001", new Vector3(0f, 0.5f, 0f));
-            if (plugin.Config.SpawnHczArmory)
-                SpawnObjectInSpecificRoom(Room.Get(Exiled.API.Enums.RoomType.HczArmory), "DTR-DFRB-001", new Vector3(0f, 5f, 0f));
-            if (plugin.Config.SpawnMicroHID)
-                SpawnObjectInSpecificRoom(Room.Get(Exiled.API.Enums.RoomType.HczHid), "DTR-DFRB-001", new Vector3(0f, 2f, 0f));
+            TimeGrace = Plugin.Instance.Config.GraceTime;
+            Plugin.Instance.Coroutines.Add(Timing.RunCoroutine(Plugin.Instance.EventHandlers.TimeOfGrace()));
+            foreach (RoomType room in plugin.Config.RoomTypes)
+            {
+                CustomItem.Get($"{plugin.Config.Desfri.Name}").Spawn(Room.Get(room).Position + new Vector3(0, 1f, 0));
+            }
         }
 
-        private void SpawnObjectInSpecificRoom(Room roomName, String itemType, Vector3 positionplus)
+        public void OnRoundEnd(RoundEndedEventArgs ev)
         {
-            // Encuentra la sala por su nombre
-            Room room = roomName;
-            float PlusX = positionplus.x;
-            float PlusY = positionplus.y;
-            float PlusZ = positionplus.z;
-            Vector3 Plus = new Vector3(PlusX, PlusY, PlusZ);
-            if (room != null)
-            {
-                // Obtiene una posición aleatoria dentro de la sala
-                Vector3 position = new Vector3(room.Position.x + PlusX, room.Position.y + PlusY, room.Position.z + PlusZ);
+            foreach (CoroutineHandle coroutine in Plugin.Instance.Coroutines)
+                Timing.KillCoroutines(coroutine);
+            Plugin.Instance.Coroutines.Clear();
+            Cooldown = 0;
+            TimeGrace = 120;
+        }
 
-                // Crea una instancia del objeto que deseas spawnear
-                CustomItem item = CustomItem.Get($"{itemType}");
-                Timing.CallDelayed(5, () => { CustomItem.Get($"{itemType}").Spawn(position); });
-                if (item != null)
-                    Log.Info($"¡Item {itemType} Successfully in {roomName}({roomName.Position + Plus}!.");
-                else
-                    Log.Error("Oops... Something Is Wrong.");
-            }
-            else
+        public IEnumerator<float> TimeOfGrace()
+        {
+            for (; ; )
             {
-                Log.Error($"Not Found Room with the name {roomName}. Please, check the name carefully.");
+                yield return Timing.WaitForSeconds(1f);
+                TimeGrace--;
+
+
+                if (TimeGrace == 0)
+                {
+                    foreach (CoroutineHandle coroutine in Plugin.Instance.Coroutines)
+                        Timing.KillCoroutines(coroutine);
+                    Plugin.Instance.Coroutines.Clear();
+                }
+
+
+            }
+        }
+        public IEnumerator<float> TimerCooldown()
+        {
+            for (; ; )
+            {
+                yield return Timing.WaitForSeconds(1f);
+                Cooldown--;
+
+
+                if (Cooldown == 0)
+                {
+                    foreach (CoroutineHandle coroutine in Plugin.Instance.Coroutines)
+                        Timing.KillCoroutines(coroutine);
+                    Plugin.Instance.Coroutines.Clear();
+                }
+
+
             }
         }
     }
