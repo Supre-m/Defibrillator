@@ -43,6 +43,7 @@
         /// <inheritdoc/>
         public override SpawnProperties SpawnProperties { get; set; }
 
+
         /// <inheritdoc/>
         protected override void SubscribeEvents()
         {
@@ -89,7 +90,7 @@
                     if (closestRagdoll != null)
                     {
 
-                        if (closestRagdoll.Owner.IsDead && !closestRagdoll.Owner.IsHost && closestRagdoll.Owner != null)
+                        if (closestRagdoll.Owner.IsDead && !closestRagdoll.Owner.IsHost && closestRagdoll.Owner != null && Player.List.Contains(ev.Player))
                         {
                             if (closestRagdoll.Role.GetTeam() != Team.SCPs)
                             {
