@@ -16,6 +16,8 @@
     using static PlayerList;
     using System.Linq;
     using System.Diagnostics.Eventing.Reader;
+    using DesfribilatorPlugin;
+    using System.Text;
 
     /// <inheritdoc />
     [CustomItem(ItemType.Medkit)]
@@ -94,57 +96,16 @@
                         {
                             if (closestRagdoll.Role.GetTeam() != Team.SCPs)
                             {
-                                Player ply = closestRagdoll.Owner;
-                                ply.Role.Set(closestRagdoll.Role, RoleSpawnFlags.None);
-                                ply.Health = Mathf.RoundToInt(Plugin.Instance.Config.PercentageOfHPWhenRevived / 100 * ply.MaxHealth);
-                                ply.EnableEffect(EffectType.Burned, 15, false);
-                                ply.EnableEffect(EffectType.AmnesiaVision, 25, false);
-                                var revivingEffects = Plugin.Instance.Config.RevivingEffects;
-                                foreach (var Effects in revivingEffects)
-                                {
-                                    var EffectType = Effects.Key;
-                                    var TimeEffect = Effects.Value;
-                                    ply.EnableEffect(EffectType, TimeEffect);
-                                }
-                                ply.Position = new Vector3(closestRagdoll.Position.x, closestRagdoll.Position.y + 2, closestRagdoll.Position.z);
-                                ply.ShowHint($"{Plugin.Instance.Translation.MessageWhenYouRevive}".Replace("{PlayerName}", ev.Player.DisplayNickname), 4);
-                                if (ply.CurrentRoom == Room.Get(RoomType.Pocket))
-                                    ply.EnableEffect(EffectType.PocketCorroding, 9999, false);
-                                Plugin.Instance.EventHandlers.Cooldown = Plugin.Instance.Config.CooldownTime;
-                                Plugin.Instance.Coroutines.Add(Timing.RunCoroutine(Plugin.Instance.EventHandlers.TimerCooldown()));
+                                Extensions.RespawnHumanPlayer(ev.Player, closestRagdoll);
                                 ev.Item.Destroy();
-                                closestRagdoll.Destroy();
-                                Log.Info($"Player {ply.Nickname} revived successfully.");
                             }
                             else
                             {
 
-                                if (Plugin.Instance.Config.SCPRevive == true)
+                                if (!Plugin.Instance.Config.SCPBlacklisted.Contains(closestRagdoll.Role))
                                 {
-                                    foreach (RoleTypeId roleTypeId in Plugin.Instance.Config.SCPBlacklisted)
-                                    {
-                                        if (ev.Player.Role.Type != roleTypeId)
-                                        {
-                                            Player ply = closestRagdoll.Owner;
-                                            ply.Role.Set(closestRagdoll.Role, RoleSpawnFlags.None);
-                                            ply.Health = Mathf.RoundToInt(Plugin.Instance.Config.PercentageOfHPWhenSCPRevived / 100 * ply.MaxHealth);
-                                            var revivingEffectsSCPs = Plugin.Instance.Config.RevivingEffectsSCPs;
-                                            foreach (var Effects in revivingEffectsSCPs)
-                                            {
-                                                var EffectType = Effects.Key;
-                                                var TimeEffect = Effects.Value;
-                                                ply.EnableEffect(EffectType, TimeEffect);
-                                            }
-                                            ply.Position = new Vector3(closestRagdoll.Position.x, closestRagdoll.Position.y + 2, closestRagdoll.Position.z);
-                                            ply.ShowHint($"{Plugin.Instance.Translation.MessageWhenYouReviveSCP}".Replace("{PlayerName}", ev.Player.DisplayNickname), 4);
-
-                                            Plugin.Instance.EventHandlers.Cooldown = Plugin.Instance.Config.CooldownTimeSCP;
-                                            Plugin.Instance.Coroutines.Add(Timing.RunCoroutine(Plugin.Instance.EventHandlers.TimerCooldown()));
-                                            ev.Item.Destroy();
-                                            closestRagdoll.Destroy();
-                                            Log.Info($"The SCP {ply.Nickname} has revived.");
-                                        }
-                                    }
+                                    Extensions.RespawnSCP(ev.Player, closestRagdoll);
+                                    ev.Item.Destroy();
                                 }
                                 else
                                 {

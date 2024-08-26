@@ -23,6 +23,9 @@ namespace DesfribilatorPlugin
         [Description("Grace time at the start of the game to be able to use the defibrillator.")]
         public int GraceTime { get; set; } = 150;
 
+        [Description("Time when the revived is invulnerable (set it to 0 to disable it).")]
+        public int ProctetionDamageTime { get; set; } = 3;
+
         [Description("Blacklisted SCPs")]
         public List<RoleTypeId> SCPBlacklisted { get; set; } = new List<RoleTypeId>
         {

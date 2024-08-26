@@ -11,5 +11,6 @@
         public string BlacklistedSCPMessage { get; private set; } = "You can't revive something like that\n<color=red>Maybe you can revive other SCPs...</color>";
         public string MessageWhenARagdollnotavailable { get; private set; } = "This body has not a soul anymore...\n<color=red>You shouldn't try again</color>";
         public string hintwhenthereisnoragdollnearby { get; private set; } = "¡Your need a corspe!";
+        public string hintwhenragdollisinliftwhenwarhead { get; private set; } = "¡You can't!";
     }
 }

@@ -9,6 +9,7 @@ using Exiled.CustomItems.API.Features;
 using Exiled.Events.EventArgs.Server;
 using Exiled.API.Enums;
 using Exiled.CustomRoles.API.Features;
+using Exiled.Events.EventArgs.Player;
 
 namespace DesfribilatorPlugin
 {
@@ -25,6 +26,17 @@ namespace DesfribilatorPlugin
             foreach (RoomType room in plugin.Config.RoomTypes)
             {
                 CustomItem.Get($"{plugin.Config.Desfri.Name}").Spawn(Room.Get(room).Position + new Vector3(0, 1f, 0));
+            }
+        }
+
+        public void OnHurting(HurtingEventArgs ev)
+        {
+            if (ev.Player.SessionVariables.ContainsKey("DesInv"))
+            {
+                if (ev.DamageHandler.Type != DamageType.Warhead || ev.DamageHandler.Type != DamageType.Decontamination)
+                {
+                    ev.IsAllowed = false;
+                }
             }
         }
 
